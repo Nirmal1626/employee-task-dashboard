@@ -1,0 +1,178 @@
+import { shiftDate } from './dates';
+import type { Task } from './types';
+
+export function crmTasks(now = new Date()): Task[] {
+  const on = (days: number) => shiftDate(now, days);
+  return [
+    {
+      id: 'crm-1042',
+      reference: 'CRM-1042',
+      title: 'Renewal call with Acme Industries',
+      employee: 'Priya Shah',
+      status: 'in_progress',
+      urgency: 'high',
+      deadline: on(-1),
+      source: 'crm',
+      href: '/crm/tasks/crm-1042',
+      account: 'Acme Industries',
+      summary: 'The annual support renewal is unsigned. Confirm the seat count and send the revised quote.',
+    },
+    {
+      id: 'crm-1048',
+      reference: 'CRM-1048',
+      title: 'Send the Northwind proposal',
+      employee: 'Arjun Mehta',
+      status: 'open',
+      urgency: 'critical',
+      deadline: on(0),
+      source: 'crm',
+      href: '/crm/tasks/crm-1048',
+      account: 'Northwind Traders',
+      summary: 'Legal approved the proposal this morning. It still has to reach the buyer before the pricing window closes.',
+    },
+    {
+      id: 'crm-1055',
+      reference: 'CRM-1055',
+      title: 'Move Globex to negotiation',
+      employee: 'Neha Kapoor',
+      status: 'open',
+      urgency: 'medium',
+      deadline: on(4),
+      source: 'crm',
+      href: '/crm/tasks/crm-1055',
+      account: 'Globex',
+      summary: 'Discovery notes are complete. Update the opportunity stage after the stakeholder meeting.',
+    },
+    {
+      id: 'crm-1061',
+      reference: 'CRM-1061',
+      title: 'Initech demo follow-up',
+      employee: 'Rohan Das',
+      status: 'done',
+      urgency: 'low',
+      deadline: on(-3),
+      source: 'crm',
+      href: '/crm/tasks/crm-1061',
+      account: 'Initech',
+      summary: 'Demo recording and recap were sent. No further action is waiting on sales.',
+    },
+    {
+      id: 'crm-1070',
+      reference: 'CRM-1070',
+      title: 'Clear Umbrella contract redlines',
+      employee: 'Ananya Iyer',
+      status: 'blocked',
+      urgency: 'high',
+      deadline: on(1),
+      source: 'crm',
+      href: '/crm/tasks/crm-1070',
+      account: 'Umbrella Health',
+      summary: 'Waiting on the customer’s counsel for two liability clauses. Chase the thread if it is still quiet tomorrow.',
+    },
+    {
+      id: 'crm-1077',
+      reference: 'CRM-1077',
+      title: 'Review the Hooli Q4 pipeline',
+      employee: 'Priya Shah',
+      status: 'in_progress',
+      urgency: 'medium',
+      deadline: on(6),
+      source: 'crm',
+      href: '/crm/tasks/crm-1077',
+      account: 'Hooli',
+      summary: 'Check close dates on the three open opportunities and flag anything that has not moved in two weeks.',
+    },
+  ];
+}
+
+export function helpdeskTasks(now = new Date()): Task[] {
+  const on = (days: number) => shiftDate(now, days);
+  return [
+    {
+      id: 'hd-338',
+      reference: 'HD-338',
+      title: 'Finance email outage',
+      employee: 'Ananya Iyer',
+      status: 'in_progress',
+      urgency: 'critical',
+      deadline: on(-2),
+      source: 'helpdesk',
+      href: '/helpdesk/tickets/hd-338',
+      account: 'Finance mailbox',
+      summary: 'Outbound mail from the finance shared mailbox has been failing since yesterday. The vendor ticket is open.',
+    },
+    {
+      id: 'hd-351',
+      reference: 'HD-351',
+      title: 'VPN access for a new hire',
+      employee: 'Rohan Das',
+      status: 'open',
+      urgency: 'high',
+      deadline: on(0),
+      source: 'helpdesk',
+      href: '/helpdesk/tickets/hd-351',
+      account: 'People operations',
+      summary: 'A new analyst starts today and cannot reach the internal wiki. Provision the standard VPN group.',
+    },
+    {
+      id: 'hd-360',
+      reference: 'HD-360',
+      title: 'Replace a failing laptop',
+      employee: 'Priya Shah',
+      status: 'in_progress',
+      urgency: 'medium',
+      deadline: on(2),
+      source: 'helpdesk',
+      href: '/helpdesk/tickets/hd-360',
+      account: 'Sales floor',
+      summary: 'The device restarts during calls. A spare is imaged and waiting for a handover slot.',
+    },
+    {
+      id: 'hd-366',
+      reference: 'HD-366',
+      title: 'Clear the password-reset queue',
+      employee: 'Neha Kapoor',
+      status: 'open',
+      urgency: 'low',
+      deadline: on(8),
+      source: 'helpdesk',
+      href: '/helpdesk/tickets/hd-366',
+      account: 'Service desk',
+      summary: 'Four self-service resets bounced overnight. Confirm the directory sync and close the duplicates.',
+    },
+    {
+      id: 'hd-372',
+      reference: 'HD-372',
+      title: 'Floor 3 printer jam',
+      employee: 'Arjun Mehta',
+      status: 'done',
+      urgency: 'low',
+      deadline: on(-1),
+      source: 'helpdesk',
+      href: '/helpdesk/tickets/hd-372',
+      account: 'Office services',
+      summary: 'The tray was reseated and a test page printed. The ticket can stay closed.',
+    },
+    {
+      id: 'hd-380',
+      reference: 'HD-380',
+      title: 'Slack notifications are not arriving',
+      employee: 'Neha Kapoor',
+      status: 'blocked',
+      urgency: 'high',
+      deadline: on(1),
+      source: 'helpdesk',
+      href: '/helpdesk/tickets/hd-380',
+      account: 'Customer success',
+      summary: 'Mentions in the support channel stopped after the app update. Waiting on the workspace owner to approve the new scope.',
+    },
+  ];
+}
+
+export function findCrmTask(id: string, now = new Date()) {
+  return crmTasks(now).find((task) => task.id === id);
+}
+
+export function findHelpdeskTask(id: string, now = new Date()) {
+  return helpdeskTasks(now).find((task) => task.id === id);
+}

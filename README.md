@@ -1,10 +1,10 @@
 # Employee Task Dashboard
 
-A small React and Node.js app. The dashboard loads tasks from two mock REST APIs, ranks them by deadline and urgency, and links each task to its source application.
+A small React app. The home page loads tasks from two mock APIs, a CRM and a helpdesk, and sorts them by deadline and urgency.
 
 ## Setup
 
-Requires Node.js 18 or newer.
+Node 18 or newer.
 
 ```bash
 npm install
@@ -13,27 +13,14 @@ npm run dev
 
 Open http://localhost:3000.
 
-`npm run build` then `npm start` runs the production server.
+`npm run build` and `npm start` run the production build.
 
-## What you can do
+## Using it
 
-- See CRM and Helpdesk tasks on one list, with overdue and due-today work first.
-- Filter by employee and task status.
-- Open a task in Northwind CRM (`/crm`) or Lumen Helpdesk (`/helpdesk`).
-- Turn on “CRM unavailable” or “Helpdesk unavailable” to see a failed API while the other source still loads. Retry fetches both again.
+Filter by employee and status. Each row links to the deal or ticket it came from.
 
-## APIs
+`GET /api/crm/tasks` and `GET /api/helpdesk/tasks` return `{ source, tasks }`.
 
-`GET /api/crm/tasks`
+If one of those calls fails, the dashboard still shows the other list and a retry button. Add `?fail=1` to either URL to force a 503.
 
-`GET /api/helpdesk/tasks`
-
-Both return `{ "source": "crm" | "helpdesk", "tasks": [ ... ] }`.
-
-Add `?fail=1` to either URL to receive `503` and `{ "error": "..." }`.
-
-Deadlines are calculated from the server date, so the sample overdue and due-today tasks stay meaningful.
-
-## Priority
-
-Completed tasks stay at the bottom. Everything else is scored from how soon the deadline is, then from urgency (`critical`, `high`, `medium`, `low`). A blocked task gets a small extra boost. The dashboard shows that order as P1, P2, and so on.
+Done tasks stay at the bottom. The rest are ordered by how close the deadline is, then by urgency.

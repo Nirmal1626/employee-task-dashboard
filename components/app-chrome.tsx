@@ -8,21 +8,27 @@ export function AppChrome({
   kind: 'crm' | 'helpdesk';
   children: ReactNode;
 }) {
-  const crm = kind === 'crm';
   return (
-    <div className="min-h-screen bg-white">
-      <header className={crm ? 'bg-[#0b1f3a] text-white' : 'bg-[#0f3d38] text-white'}>
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/60">
-              {crm ? 'Sales system' : 'Support system'}
-            </p>
-            <p className="text-lg font-semibold">{crm ? 'Northwind CRM' : 'Lumen Helpdesk'}</p>
-          </div>
-          <Link className="text-sm font-semibold text-white/80" href="/">Back to dashboard</Link>
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="site-header-inner">
+          <Link className="brand" href="/" aria-label="Workboard home">
+            <span className="brand-mark" aria-hidden="true">w</span>
+            <span>workboard</span>
+          </Link>
+          <nav className="primary-nav" aria-label="Main navigation">
+            <Link className="nav-link" href="/">Overview</Link>
+            <Link className={`nav-link${kind === 'crm' ? ' nav-link-active' : ''}`} href="/crm">CRM</Link>
+            <Link className={`nav-link${kind === 'helpdesk' ? ' nav-link-active' : ''}`} href="/helpdesk">Helpdesk</Link>
+          </nav>
+          <span className="header-note">Your team, in sync</span>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
+      <main className="chrome-main">{children}</main>
+      <footer className="site-footer">
+        <span>workboard</span>
+        <span>A little more clarity, every day.</span>
+      </footer>
     </div>
   );
 }

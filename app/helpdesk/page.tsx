@@ -5,23 +5,45 @@ import { helpdeskTasks } from '@/lib/tasks';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'Lumen Helpdesk' };
+export const metadata = { title: 'Helpdesk' };
 
 export default function HelpdeskHomePage() {
   const tasks = helpdeskTasks();
   return (
     <AppChrome kind="helpdesk">
-      <h1 className="text-3xl font-semibold">Ticket queue</h1>
-      <p className="mt-2 text-slate-600">This is the mock Helpdesk. Dashboard links for support tasks land here.</p>
-      <ul className="mt-6 divide-y divide-line rounded-2xl border border-line">
-        {tasks.map((task) => (
-          <li key={task.id} className="px-4 py-3">
-            <p className="text-xs font-semibold text-teal-800">{task.reference}</p>
-            <Link className="font-semibold" href={task.href}>{task.title}</Link>
-            <p className="text-sm text-slate-500">{task.account} · {task.employee} · {formatDate(task.deadline)}</p>
-          </li>
-        ))}
-      </ul>
+      <div className="chrome-heading">
+        <div>
+          <p className="eyebrow">Help for the day-to-day</p>
+          <h1>Support tickets</h1>
+          <p>Small fixes and urgent requests, tracked without the fuss.</p>
+        </div>
+        <Link className="button button-secondary" href="/">← All tasks</Link>
+      </div>
+      <div className="chrome-list">
+        <table className="chrome-table">
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Area</th>
+              <th>Assignee</th>
+              <th>Due date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map((task) => (
+              <tr key={task.id}>
+                <td>
+                  <Link className="table-primary" href={task.href}>{task.title}</Link>
+                  <span className="table-reference">{task.reference}</span>
+                </td>
+                <td>{task.account}</td>
+                <td>{task.employee}</td>
+                <td>{formatDate(task.deadline)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </AppChrome>
   );
 }

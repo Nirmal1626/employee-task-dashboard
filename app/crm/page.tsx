@@ -5,25 +5,45 @@ import { crmTasks } from '@/lib/tasks';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'Northwind CRM' };
+export const metadata = { title: 'CRM' };
 
 export default function CrmHomePage() {
   const tasks = crmTasks();
   return (
     <AppChrome kind="crm">
-      <h1 className="text-3xl font-semibold">Open deals</h1>
-      <p className="mt-2 text-slate-600">This is the mock CRM. Dashboard links for CRM tasks land here.</p>
-      <ul className="mt-6 divide-y divide-line rounded-2xl border border-line">
-        {tasks.map((task) => (
-          <li key={task.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div>
-              <p className="text-xs font-semibold text-blue-800">{task.reference}</p>
-              <Link className="font-semibold" href={task.href}>{task.title}</Link>
-              <p className="text-sm text-slate-500">{task.account} · {task.employee} · {formatDate(task.deadline)}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="chrome-heading">
+        <div>
+          <p className="eyebrow">Customer relationships</p>
+          <h1>Deals</h1>
+          <p>Keep an eye on the conversations moving business forward.</p>
+        </div>
+        <Link className="button button-secondary" href="/">← All tasks</Link>
+      </div>
+      <div className="chrome-list">
+        <table className="chrome-table">
+          <thead>
+            <tr>
+              <th>Deal</th>
+              <th>Account</th>
+              <th>Owner</th>
+              <th>Close date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map((task) => (
+              <tr key={task.id}>
+                <td>
+                  <Link className="table-primary" href={task.href}>{task.title}</Link>
+                  <span className="table-reference">{task.reference}</span>
+                </td>
+                <td>{task.account}</td>
+                <td>{task.employee}</td>
+                <td>{formatDate(task.deadline)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </AppChrome>
   );
 }

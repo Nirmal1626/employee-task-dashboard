@@ -7,7 +7,7 @@ export function GET(request: Request) {
   const fail = new URL(request.url).searchParams.get('fail');
   if (fail === '1') {
     return NextResponse.json(
-      { error: 'Helpdesk service is unavailable. Try again shortly.' },
+      { error: 'Helpdesk is unavailable right now.' },
       { status: 503 },
     );
   }

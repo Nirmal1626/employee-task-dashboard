@@ -8,7 +8,7 @@ import type { Task, TaskResponse, TaskSource, TaskStatus } from '@/lib/types';
 const employees = ['Priya Shah', 'Arjun Mehta', 'Neha Kapoor', 'Rohan Das', 'Ananya Iyer'];
 
 const statuses: { id: TaskStatus | 'all'; label: string }[] = [
-  { id: 'all', label: 'All statuses' },
+  { id: 'all', label: 'All tasks' },
   { id: 'open', label: 'Open' },
   { id: 'in_progress', label: 'In progress' },
   { id: 'blocked', label: 'Blocked' },
@@ -29,29 +29,27 @@ type SourceState = {
 
 const emptySource: SourceState = { tasks: [], error: null };
 
-async function loadSource(source: TaskSource, fail: boolean): Promise<SourceState> {
-  const url = fail ? `/api/${source}/tasks?fail=1` : `/api/${source}/tasks`;
+async function loadSource(source: TaskSource): Promise<SourceState> {
   try {
-    const response = await fetch(url, { cache: 'no-store' });
+    const response = await fetch(`/api/${source}/tasks`, { cache: 'no-store' });
     const body = (await response.json().catch(() => null)) as TaskResponse | { error?: string } | null;
     if (!response.ok) {
-      const message = body && 'error' in body && body.error ? body.error : `${source} returned ${response.status}`;
+      const message = body && 'error' in body && body.error ? body.error : `Request failed (${response.status})`;
       return { tasks: [], error: message };
     }
     if (!body || !('tasks' in body) || !Array.isArray(body.tasks)) {
-      return { tasks: [], error: `${source} returned an unexpected response.` };
+      return { tasks: [], error: 'Unexpected response.' };
     }
     return { tasks: body.tasks, error: null };
   } catch {
-    return { tasks: [], error: `Could not reach the ${source} service.` };
+    return { tasks: [], error: 'Could not reach the server.' };
   }
 }
 
 export function TaskDashboard() {
   const [employee, setEmployee] = useState('all');
   const [status, setStatus] = useState<TaskStatus | 'all'>('all');
-  const [failCrm, setFailCrm] = useState(false);
-  const [failHelpdesk, setFailHelpdesk] = useState(false);
+  const [query, setQuery] = useState('');
   const [crm, setCrm] = useState<SourceState>(emptySource);
   const [helpdesk, setHelpdesk] = useState<SourceState>(emptySource);
   const [loading, setLoading] = useState(true);
@@ -60,7 +58,7 @@ export function TaskDashboard() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([loadSource('crm', failCrm), loadSource('helpdesk', failHelpdesk)]).then(([crmResult, helpdeskResult]) => {
+    Promise.all([loadSource('crm'), loadSource('helpdesk')]).then(([crmResult, helpdeskResult]) => {
       if (cancelled) return;
       setCrm(crmResult);
       setHelpdesk(helpdeskResult);
@@ -69,181 +67,199 @@ export function TaskDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [failCrm, failHelpdesk, reloadKey]);
+  }, [reloadKey]);
 
   const merged = useMemo(() => sortByPriority([...crm.tasks, ...helpdesk.tasks]), [crm.tasks, helpdesk.tasks]);
+  const normalizedQuery = query.trim().toLowerCase();
   const visible = merged.filter((task) => {
     if (employee !== 'all' && task.employee !== employee) return false;
     if (status !== 'all' && task.status !== status) return false;
+    if (
+      normalizedQuery &&
+      ![task.title, task.reference, task.employee, task.account].some((value) =>
+        value.toLowerCase().includes(normalizedQuery),
+      )
+    ) return false;
     return true;
   });
-  const active = visible.filter((task) => task.status !== 'done');
-  const overdue = active.filter((task) => deadlineLabel(task).startsWith('Overdue')).length;
-  const dueToday = active.filter((task) => deadlineLabel(task) === 'Due today').length;
+  const overdue = merged.filter((task) => task.status !== 'done' && deadlineLabel(task).startsWith('Overdue')).length;
+  const openCount = merged.filter((task) => task.status !== 'done').length;
+  const blockedCount = merged.filter((task) => task.status === 'blocked').length;
+  const dateLabel = new Intl.DateTimeFormat('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date());
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Internal tools</p>
-            <p className="text-lg font-semibold">Employee Task Dashboard</p>
-          </div>
-          <div className="flex gap-2 text-sm">
-            <a className="rounded-full border border-line px-3 py-1.5 font-medium text-blue-800" href="/crm">CRM</a>
-            <a className="rounded-full border border-line px-3 py-1.5 font-medium text-teal-800" href="/helpdesk">Helpdesk</a>
-          </div>
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="site-header-inner">
+          <a className="brand" href="/" aria-label="Workboard home">
+            <span className="brand-mark" aria-hidden="true">w</span>
+            <span>workboard</span>
+          </a>
+          <nav className="primary-nav" aria-label="Main navigation">
+            <a className="nav-link nav-link-active" href="/">Overview</a>
+            <a className="nav-link" href="/crm">CRM</a>
+            <a className="nav-link" href="/helpdesk">Helpdesk</a>
+          </nav>
+          <span className="header-note">Your team, in sync</span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <div className="max-w-2xl">
-          <h1 className="text-3xl font-semibold tracking-tight">Today’s work, ranked</h1>
-          <p className="mt-2 text-slate-600">
-            Tasks are fetched from the CRM and Helpdesk APIs, then ordered by deadline and urgency. Completed work stays at the bottom.
-          </p>
+      <main className="dashboard-main">
+        <div className="welcome-row">
+          <div>
+            <p className="eyebrow">{dateLabel}</p>
+            <h1 className="page-title">Good work starts with a clear view.</h1>
+            <p className="page-intro">The team's CRM and support work, together in one place.</p>
+          </div>
+          <button
+            className="button button-secondary refresh-button"
+            type="button"
+            onClick={() => setReloadKey((value) => value + 1)}
+            disabled={loading}
+          >
+            <span aria-hidden="true" className={loading ? 'refresh-icon is-spinning' : 'refresh-icon'}>↻</span>
+            {loading ? 'Refreshing' : 'Refresh'}
+          </button>
         </div>
 
-        <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Showing" value={loading ? '—' : String(visible.length)} />
-          <Stat label="Overdue" value={loading ? '—' : String(overdue)} tone={overdue > 0 ? 'alert' : 'normal'} />
-          <Stat label="Due today" value={loading ? '—' : String(dueToday)} />
-          <Stat label="Sources" value={loading ? '—' : sourceSummary(crm.error, helpdesk.error)} />
+        <section className="summary-grid" aria-label="Task summary">
+          <article className="summary-card">
+            <span className="summary-label">In the queue</span>
+            <strong className="summary-number">{loading ? '—' : openCount}</strong>
+            <span className="summary-note">tasks still in progress</span>
+          </article>
+          <article className="summary-card summary-card-warm">
+            <span className="summary-label">Past their due date</span>
+            <strong className="summary-number">{loading ? '—' : overdue}</strong>
+            <span className="summary-note">could use a follow-up</span>
+          </article>
+          <article className="summary-card">
+            <span className="summary-label">Waiting on someone</span>
+            <strong className="summary-number">{loading ? '—' : blockedCount}</strong>
+            <span className="summary-note">blocked tasks</span>
+          </article>
         </section>
 
         {(crm.error || helpdesk.error) && (
-          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-            <p className="font-semibold">One or more sources did not load.</p>
-            {crm.error && <p className="mt-1">CRM: {crm.error}</p>}
-            {helpdesk.error && <p className="mt-1">Helpdesk: {helpdesk.error}</p>}
-            <p className="mt-1">Tasks from the source that responded are still listed.</p>
+          <div className="notice notice-error" role="alert">
+            <div>
+              <strong>Some tasks couldn’t be loaded.</strong>
+              {crm.error && <p>CRM: {crm.error}</p>}
+              {helpdesk.error && <p>Helpdesk: {helpdesk.error}</p>}
+              <p>The other list is still available.</p>
+            </div>
+            <button className="button button-secondary" type="button" onClick={() => setReloadKey((value) => value + 1)}>
+              Try again
+            </button>
           </div>
         )}
 
-        <section className="mt-4 rounded-2xl border border-line bg-white p-4">
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <label className="block text-sm font-medium">
-              Employee
-              <select
-                className="mt-1 w-full rounded-xl border border-line bg-white px-3 py-2"
-                value={employee}
-                onChange={(event) => setEmployee(event.target.value)}
-              >
-                <option value="all">All employees</option>
-                {employees.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm font-medium">
-              Task status
-              <select
-                className="mt-1 w-full rounded-xl border border-line bg-white px-3 py-2"
-                value={status}
-                onChange={(event) => setStatus(event.target.value as TaskStatus | 'all')}
-              >
-                {statuses.map((item) => (
-                  <option key={item.id} value={item.id}>{item.label}</option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="self-end rounded-xl border border-line px-4 py-2 text-sm font-semibold"
-              type="button"
-              onClick={() => {
-                setEmployee('all');
-                setStatus('all');
-              }}
-            >
-              Reset filters
-            </button>
+        <section className="task-section" aria-labelledby="task-list-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">The work list</p>
+              <h2 id="task-list-heading">Tasks that need a look</h2>
+            </div>
+            <span className="result-count" aria-live="polite">
+              {loading ? 'Loading tasks…' : `${visible.length} ${visible.length === 1 ? 'task' : 'tasks'}`}
+            </span>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate-600">
-            <span className="font-medium text-ink">Demo the error handling</span>
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" checked={failCrm} onChange={(event) => setFailCrm(event.target.checked)} />
-              CRM unavailable
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" checked={failHelpdesk} onChange={(event) => setFailHelpdesk(event.target.checked)} />
-              Helpdesk unavailable
-            </label>
-            <button className="font-semibold text-blue-800" type="button" onClick={() => setReloadKey((value) => value + 1)}>
-              Retry
-            </button>
-          </div>
-        </section>
 
-        <section className="mt-4 space-y-3">
-          {loading && <p className="rounded-2xl border border-line bg-white px-4 py-8 text-center text-slate-500">Loading tasks from both services…</p>}
-          {!loading && visible.length === 0 && (
-            <p className="rounded-2xl border border-line bg-white px-4 py-8 text-center text-slate-500">
-              No tasks match these filters.
-            </p>
-          )}
-          {!loading && visible.map((task, index) => (
-            <article key={task.id} className="rounded-2xl border border-line bg-white p-4 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                    <span className="rounded-full bg-slate-900 px-2 py-1 text-white">
-                      {task.status === 'done' ? 'Done' : `P${index + 1}`}
-                    </span>
-                    <span className={task.source === 'crm' ? 'rounded-full bg-blue-50 px-2 py-1 text-blue-800' : 'rounded-full bg-teal-50 px-2 py-1 text-teal-800'}>
-                      {task.source === 'crm' ? 'CRM' : 'Helpdesk'}
-                    </span>
-                    <span className={urgencyClass(task.urgency)}>{task.urgency}</span>
-                    <span className={deadlineClass(deadlineLabel(task))}>{deadlineLabel(task)}</span>
-                  </div>
-                  <h2 className="mt-2 text-lg font-semibold">
-                    <a className="hover:text-blue-800" href={task.href}>{task.title}</a>
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {task.reference} · {task.employee} · {statusLabel[task.status]} · {task.account}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">Deadline {formatDate(task.deadline)}</p>
-                </div>
-                <a
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  href={task.href}
+          <div className="filter-panel">
+            <div className="status-filters" role="group" aria-label="Filter by status">
+              {statuses.map((item) => (
+                <button
+                  className={`filter-button${status === item.id ? ' filter-button-active' : ''}`}
+                  key={item.id}
+                  type="button"
+                  aria-pressed={status === item.id}
+                  onClick={() => setStatus(item.id)}
                 >
-                  Open in {task.source === 'crm' ? 'CRM' : 'Helpdesk'}
-                </a>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="secondary-filters">
+              <label className="select-wrap">
+                <span className="sr-only">Filter by employee</span>
+                <select value={employee} onChange={(event) => setEmployee(event.target.value)}>
+                  <option value="all">Everyone</option>
+                  {employees.map((name) => <option key={name} value={name}>{name}</option>)}
+                </select>
+              </label>
+              <label className="search-wrap">
+                <span className="search-icon" aria-hidden="true">⌕</span>
+                <span className="sr-only">Search tasks</span>
+                <input
+                  type="search"
+                  placeholder="Find a task"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="task-list">
+            {loading && <div className="empty-state"><span className="loading-dot" />Loading the latest tasks…</div>}
+            {!loading && visible.length === 0 && (
+              <div className="empty-state">
+                <span className="empty-state-mark" aria-hidden="true">✓</span>
+                <strong>Nothing to see here.</strong>
+                <span>Try another status or search for something else.</span>
               </div>
-            </article>
-          ))}
+            )}
+            {!loading && visible.map((task) => {
+              const due = deadlineLabel(task);
+              return (
+                <article className="task-row" key={`${task.source}-${task.id}`}>
+                  <div className={`task-priority priority-${task.urgency}`} aria-hidden="true" />
+                  <div className="task-primary">
+                    <a className="task-title" href={task.href}>{task.title}</a>
+                    <div className="task-meta">
+                      <span>{task.reference}</span>
+                      <span className="meta-divider" aria-hidden="true">·</span>
+                      <span>{task.account}</span>
+                    </div>
+                  </div>
+                  <div className="task-owner">
+                    <span className="avatar" aria-hidden="true">{initials(task.employee)}</span>
+                    <span>{task.employee}</span>
+                  </div>
+                  <div className="task-labels">
+                    <span className={`status-pill status-${task.status}`}>{statusLabel[task.status]}</span>
+                    <span className={`urgency-label urgency-text-${task.urgency}`}>{labelWord(task.urgency)} priority</span>
+                  </div>
+                  <div className={`task-due${due.startsWith('Overdue') ? ' task-due-overdue' : due === 'Due today' ? ' task-due-today' : ''}`}>
+                    <span>{formatDate(task.deadline)}</span>
+                    <small>{due}</small>
+                  </div>
+                  <a className="source-link" href={task.href} aria-label={`Open ${task.reference}`}>
+                    {task.source === 'crm' ? 'CRM' : 'Support'} <span aria-hidden="true">↗</span>
+                  </a>
+                </article>
+              );
+            })}
+          </div>
+          <p className="list-footnote">Sorted by what’s due soonest and most urgent.</p>
         </section>
       </main>
+      <footer className="site-footer">
+        <span>workboard</span>
+        <span>A little more clarity, every day.</span>
+      </footer>
     </div>
   );
 }
 
-function sourceSummary(crmError: string | null, helpdeskError: string | null) {
-  if (crmError && helpdeskError) return 'Both down';
-  if (crmError) return 'Helpdesk only';
-  if (helpdeskError) return 'CRM only';
-  return 'Both online';
+function initials(name: string) {
+  return name.split(' ').map((part) => part[0]).join('');
 }
 
-function Stat({ label, value, tone = 'normal' }: { label: string; value: string; tone?: 'normal' | 'alert' }) {
-  return (
-    <div className="rounded-2xl border border-line bg-white px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${tone === 'alert' ? 'text-red-700' : ''}`}>{value}</p>
-    </div>
-  );
-}
-
-function urgencyClass(urgency: Task['urgency']) {
-  if (urgency === 'critical') return 'rounded-full bg-red-50 px-2 py-1 capitalize text-red-800';
-  if (urgency === 'high') return 'rounded-full bg-orange-50 px-2 py-1 capitalize text-orange-800';
-  if (urgency === 'medium') return 'rounded-full bg-amber-50 px-2 py-1 capitalize text-amber-900';
-  return 'rounded-full bg-slate-100 px-2 py-1 capitalize text-slate-700';
-}
-
-function deadlineClass(label: string) {
-  if (label.startsWith('Overdue')) return 'rounded-full bg-red-700 px-2 py-1 text-white';
-  if (label === 'Due today') return 'rounded-full bg-amber-500 px-2 py-1 text-white';
-  if (label === 'Completed') return 'rounded-full bg-emerald-50 px-2 py-1 text-emerald-800';
-  return 'rounded-full bg-slate-100 px-2 py-1 text-slate-700';
+function labelWord(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
